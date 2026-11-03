@@ -302,28 +302,24 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
     }
 
-    .subway-tracks-bg {
+    #encounter-map-bg {
       position: absolute;
+      inset: 0;
       width: 100%;
-      height: 280px;
-      bottom: 60px;
-      background: repeating-linear-gradient(
-        0deg,
-        rgba(255,255,255,0.03) 0px,
-        rgba(255,255,255,0.03) 14px,
-        transparent 14px,
-        transparent 32px
-      );
-      border-top: 2px dashed rgba(252, 204, 10, 0.3);
-      border-bottom: 2px dashed rgba(252, 204, 10, 0.3);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: rgba(255,255,255,0.07);
-      font-family: 'Bungee';
-      font-size: 5rem;
+      height: 100%;
+      z-index: 1;
+      filter: saturate(1.4) brightness(0.68) contrast(1.15);
+      pointer-events: none;
+    }
+
+    .encounter-map-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      background: radial-gradient(circle at center 60%, rgba(18, 19, 22, 0.25) 0%, rgba(18, 19, 22, 0.85) 85%);
       pointer-events: none;
     }
 
@@ -680,8 +676,10 @@
         </div>
       </div>
 
-      <div class="catch-arena">
-        <div class="subway-tracks-bg">TRACK 3 (SUBWAY)</div>
+      <!-- CATCH ARENA WITH INTERACTIVE LOCAL MAP BACKGROUND -->
+      <div class="catch-arena" id="encounter-arena-wrap">
+        <div id="encounter-map-bg"></div>
+        <div class="encounter-map-overlay"></div>
         
         <div class="wild-rat-container" id="wild-rat-box">
           <div class="target-ring" id="target-ring"></div>
@@ -1020,6 +1018,7 @@
        MAP & LEAFLET ENGINE
        ========================================================== */
     let map;
+    let encounterMap = null;
 
     function initMap() {
       // Dark subway-styled tile layer (CartoDB DarkMatter)
@@ -1048,6 +1047,29 @@
       map.on('click', (e) => {
         walkTo(e.latlng.lat, e.latlng.lng);
       });
+    }
+
+    function initEncounterMap(lat, lng) {
+      if (!encounterMap) {
+        encounterMap = L.map('encounter-map-bg', {
+          zoomControl: false,
+          attributionControl: false,
+          dragging: false,
+          touchZoom: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+          boxZoom: false
+        }).setView([lat, lng], 18);
+
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          maxZoom: 19
+        }).addTo(encounterMap);
+      } else {
+        encounterMap.setView([lat, lng], 18);
+        setTimeout(() => {
+          encounterMap.invalidateSize();
+        }, 150);
+      }
     }
 
     function walkTo(lat, lng) {
@@ -1178,6 +1200,9 @@
       document.getElementById('encounter-pizza-left').innerText = state.pizzaCount;
 
       document.getElementById('catch-screen').style.display = 'flex';
+
+      // Update interactive encounter background to match the exact rat coordinates
+      initEncounterMap(ratInstance.lat, ratInstance.lng);
     }
 
     function escapeEncounter() {
