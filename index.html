@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Ratémon GO: NYC Subway Edition</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Google Fonts & Canvas Confetti -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Bungee&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --nyc-yellow: #fccc0a;
+      --nyc-dark: #121316;
+      --nyc-green: #00933c;
+      --nyc-blue: #0039a6;
+      --nyc-orange: #ff6319;
+      --nyc-red: #ee352e;
+      --card-bg: rgba(22, 24, 29, 0.92);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Fredoka', sans-serif;
+      background: var(--nyc-dark);
+      color: #fff;
+    }
+
+    #app-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* MAP VIEW */
+    #map {
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #1a1e24;
+    }
+
+    /* TOP HUD */
+    .top-hud {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .trainer-pill {
+      background: var(--card-bg);
+      border: 2px solid var(--nyc-yellow);
+      backdrop-filter: blur(10px);
+      border-radius: 50px;
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      pointer-events: auto;
+    }
+
+    .badge-icon {
+      font-size: 1.5rem;
+    }
+
+    .trainer-info h3 {
+      font-family: 'Bungee', cursive;
+      font-size: 0.85rem;
+      color: var(--nyc-yellow);
+      letter-spacing: 0.5px;
+    }
+
+    .trainer-info p {
+      font-size: 0.75rem;
+      color: #aaa;
+    }
+
+    .hud-resources {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .resource-badge {
+      background: var(--card-bg);
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      border-radius: 30px;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+
+    /* BOTTOM CONTROLS & RADAR */
+    .bottom-hud {
+      position: absolute;
+      bottom: 24px;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .location-banner {
+      background: rgba(18, 19, 22, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 0.8rem;
+      color: #ddd;
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-buttons {
+      display: flex;
+      gap: 14px;
+      pointer-events: auto;
+    }
+
+    .hud-btn {
+      background: var(--card-bg);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      border-radius: 50%;
+      width: 58px;
+      height: 58px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .hud-btn:hover {
+      transform: translateY(-4px) scale(1.05);
+      border-color: var(--nyc-yellow);
+    }
+
+    .hud-btn.primary-btn {
+      width: 70px;
+      height: 70px;
+      background: linear-gradient(135deg, #fccc0a, #e65100);
+      border-color: #ffe082;
+      color: #111;
+    }
+
+    .hud-btn .btn-icon {
+      font-size: 1.5rem;
+    }
+
+    .hud-btn .btn-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* CUSTOM MAP MARKERS */
+    .player-marker-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(0, 147, 60, 0.25);
+      border: 3px solid #00933c;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5rem;
+      animation: pulse-ring 2s infinite ease-out;
+      box-shadow: 0 0 15px rgba(0, 147, 60, 0.6);
+    }
+
+    .rat-marker-wrap {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(22, 24, 29, 0.85);
+      border: 2.5px solid var(--nyc-yellow);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.8rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+      animation: float-rat 3s infinite ease-in-out;
+      box-shadow: 0 4px 15px rgba(252, 204, 10, 0.4);
+    }
+
+    .rat-marker-wrap:hover {
+      transform: scale(1.2);
+    }
+
+    .rat-marker-wrap.legendary {
+      border-color: #ff007f;
+      animation: float-rat 2s infinite ease-in-out, glow-legendary 1.5s infinite alternate;
+    }
+
+    .bin-marker-wrap {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(0, 57, 166, 0.8);
+      border: 2px solid #64b5f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 57, 166, 0.5);
+      animation: bounce-bin 2.5s infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(0, 147, 60, 0.7); }
+      70% { box-shadow: 0 0 0 18px rgba(0, 147, 60, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 147, 60, 0); }
+    }
+
+    @keyframes float-rat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+
+    @keyframes bounce-bin {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-4px) scale(1.05); }
+    }
+
+    @keyframes glow-legendary {
+      from { box-shadow: 0 0 10px #ff007f, 0 0 20px #ff007f; }
+      to { box-shadow: 0 0 20px #ff0055, 0 0 35px #ffe600; }
+    }
+
+    /* ENCOUNTER / CATCH MODAL */
+    #catch-screen {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at 50% 40%, #2b303c 0%, #111317 100%);
+      overflow: hidden;
+    }
+
+    .catch-header {
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .run-away-btn {
+      background: rgba(0,0,0,0.6);
+      border: 1.5px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .catch-arena {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .subway-tracks-bg {
+      position: absolute;
+      width: 100%;
+      height: 280px;
+      bottom: 60px;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.03) 0px,
+        rgba(255,255,255,0.03) 14px,
+        transparent 14px,
+        transparent 32px
+      );
+      border-top: 2px dashed rgba(252, 204, 10, 0.3);
+      border-bottom: 2px dashed rgba(252, 204, 10, 0.3);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: rgba(255,255,255,0.07);
+      font-family: 'Bungee';
+      font-size: 5rem;
+      pointer-events: none;
+    }
+
+    .wild-rat-container {
+      position: relative;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.3s;
+    }
+
+    .target-ring {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      border: 3px solid var(--nyc-green);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: ring-shrink 1.8s infinite linear;
+      opacity: 0.8;
+    }
+
+    @keyframes ring-shrink {
+      0% { width: 170px; height: 170px; opacity: 0.8; }
+      100% { width: 50px; height: 50px; opacity: 0.2; }
+    }
+
+    .wild-rat-avatar {
+      font-size: 7.5rem;
+      filter: drop-shadow(0 15px 25px rgba(0,0,0,0.8));
+      animation: rat-idle 2.5s infinite ease-in-out;
+      cursor: pointer;
+    }
+
+    @keyframes rat-idle {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      30% { transform: scale(1.05) rotate(-3deg); }
+      70% { transform: scale(0.98) rotate(3deg); }
+    }
+
+    .wild-rat-info {
+      background: var(--card-bg);
+      border: 2px solid var(--nyc-yellow);
+      border-radius: 16px;
+      padding: 10px 22px;
+      text-align: center;
+      margin-top: 15px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
+
+    .wild-rat-name {
+      font-family: 'Bungee', cursive;
+      font-size: 1.2rem;
+      color: var(--nyc-yellow);
+    }
+
+    .wild-rat-stats {
+      font-size: 0.85rem;
+      color: #bbb;
+      margin-top: 2px;
+    }
+
+    /* SLINGSHOT / PIZZA THROW SECTION */
+    .throw-area {
+      position: relative;
+      height: 220px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding-bottom: 24px;
+      z-index: 20;
+    }
+
+    .pizza-ammo-select {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 15px;
+    }
+
+    .ammo-pill {
+      background: rgba(0,0,0,0.6);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .ammo-pill.active {
+      border-color: var(--nyc-yellow);
+      background: rgba(252, 204, 10, 0.25);
+    }
+
+    .throw-ball-wrapper {
+      position: relative;
+      width: 90px;
+      height: 90px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    .throw-projectile {
+      font-size: 3.8rem;
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.6));
+      transition: transform 0.1s;
+    }
+
+    .throw-guide-hint {
+      font-size: 0.78rem;
+      color: #aaa;
+      margin-top: 8px;
+    }
+
+    /* OVERLAY SCREENS (RATDEX, TRASH BIN LOOT, PROFILE) */
+    .modal-sheet {
+      position: absolute;
+      inset: 0;
+      z-index: 150;
+      background: rgba(10, 11, 14, 0.94);
+      backdrop-filter: blur(12px);
+      display: none;
+      flex-direction: column;
+      padding: 24px;
+      animation: slide-up 0.25s ease-out;
+      overflow-y: auto;
+    }
+
+    @keyframes slide-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-family: 'Bungee', cursive;
+      font-size: 1.4rem;
+      color: var(--nyc-yellow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .close-sheet-btn {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: white;
+      font-size: 1.4rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    /* RATDEX GRID */
+    .ratdex-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+      padding-bottom: 40px;
+    }
+
+    .rat-card {
+      background: var(--card-bg);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+
+    .rat-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--nyc-yellow);
+    }
+
+    .rat-card.locked {
+      filter: grayscale(100%) opacity(0.35);
+    }
+
+    .rat-card .card-avatar {
+      font-size: 3.5rem;
+      margin: 8px 0;
+    }
+
+    .rat-card .card-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .rat-card .card-cp {
+      font-size: 0.75rem;
+      color: var(--nyc-yellow);
+      font-weight: 700;
+    }
+
+    .rat-card .card-count {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--nyc-green);
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+
+    .rat-card .card-borough {
+      font-size: 0.65rem;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    /* ACTION TOAST */
+    #action-toast {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: var(--card-bg);
+      border: 2px solid var(--nyc-yellow);
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      white-space: nowrap;
+    }
+
+    #action-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* SUBWAY MUSIC / SOUND TOGGLE */
+    .sound-btn {
+      position: absolute;
+      top: 80px;
+      right: 16px;
+      z-index: 15;
+      background: var(--card-bg);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    /* CATCH ANIMATIONS */
+    .throw-flight {
+      transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s;
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container">
+    <!-- LEAFLET MAP OF NYC -->
+    <div id="map"></div>
+
+    <!-- TOP HUD -->
+    <div class="top-hud">
+      <div class="trainer-pill" onclick="openProfile()">
+        <span class="badge-icon">🧢</span>
+        <div class="trainer-info">
+          <h3>EXPERT EXTERMINATOR</h3>
+          <p id="trainer-level">LVL 4 • 650 XP</p>
+        </div>
+      </div>
+
+      <div class="hud-resources">
+        <div class="resource-badge" title="Plain Pizza Slices">
+          <span>🍕</span>
+          <span id="pizza-count">25</span>
+        </div>
+        <div class="resource-badge" title="Bacon Egg & Cheeses (Ultra Bait)">
+          <span>🥪</span>
+          <span id="bec-count">5</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIO TOGGLE -->
+    <button class="sound-btn" onclick="toggleAudio()" title="Sound FX">🔊</button>
+
+    <!-- BOTTOM HUD CONTROLS -->
+    <div class="bottom-hud">
+      <div class="location-banner">
+        <span>📍 NYC Subsurface Radar:</span>
+        <strong id="cur-neighborhood">Times Square - 42nd St</strong>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="hud-btn" onclick="openRatDex()">
+          <span class="btn-icon">🐀</span>
+          <span class="btn-label">Rat-Dex</span>
+        </button>
+
+        <button class="hud-btn primary-btn" onclick="triggerRadarScan()">
+          <span class="btn-icon">📡</span>
+          <span class="btn-label">Scan Trash</span>
+        </button>
+
+        <button class="hud-btn" onclick="openTrashStopModal()">
+          <span class="btn-icon">🗑️</span>
+          <span class="btn-label">Can Stop</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="action-toast">Captured Master Splinter! +150 XP</div>
+
+    <!-- CATCH / ENCOUNTER ENCOUNTER SCREEN -->
+    <div id="catch-screen">
+      <div class="catch-header">
+        <button class="run-away-btn" onclick="escapeEncounter()">🏃 RUN AWAY</button>
+        <div class="resource-badge">
+          <span>🍕</span>
+          <span id="encounter-pizza-left">25</span>
+        </div>
+      </div>
+
+      <div class="catch-arena">
+        <div class="subway-tracks-bg">TRACK 3 (SUBWAY)</div>
+        
+        <div class="wild-rat-container" id="wild-rat-box">
+          <div class="target-ring" id="target-ring"></div>
+          <div class="wild-rat-avatar" id="encounter-avatar">🐀</div>
+          <div class="wild-rat-info">
+            <div class="wild-rat-name" id="encounter-name">PIZZA RAT</div>
+            <div class="wild-rat-stats" id="encounter-stats">CP 480 • Borough: Brooklyn</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="throw-area">
+        <div class="pizza-ammo-select">
+          <div class="ammo-pill active" id="ammo-pizza" onclick="selectBait('pizza')">
+            <span>🍕 Regular Slice</span>
+          </div>
+          <div class="ammo-pill" id="ammo-bec" onclick="selectBait('bec')">
+            <span>🥪 BEC (Master Bait)</span>
+          </div>
+        </div>
+
+        <div class="throw-ball-wrapper" id="throw-ball" onclick="throwBait()">
+          <div class="throw-projectile" id="projectile-icon">🍕</div>
+        </div>
+        <div class="throw-guide-hint">TAP THE PIZZA TO FLING & FEED!</div>
+      </div>
+    </div>
+
+    <!-- RATDEX MODAL -->
+    <div class="modal-sheet" id="ratdex-sheet">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📋</span> NYC RAT-DEX COMPENDIUM
+        </div>
+        <button class="close-sheet-btn" onclick="closeSheet('ratdex-sheet')">✕</button>
+      </div>
+      <div class="ratdex-grid" id="ratdex-list">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- TRASH CAN STOP MODAL -->
+    <div class="modal-sheet" id="stop-sheet">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🗑️</span> METRO TRASH STOP
+        </div>
+        <button class="close-sheet-btn" onclick="closeSheet('stop-sheet')">✕</button>
+      </div>
+      <div style="text-align: center; padding: 30px 10px;">
+        <div style="font-size: 6rem; margin-bottom: 20px; animation: bounce-bin 2s infinite;">🗑️</div>
+        <h2 style="font-family: 'Bungee'; color: var(--nyc-yellow); margin-bottom: 8px;" id="trash-stop-name">42nd St Garbage Can</h2>
+        <p style="color: #aaa; margin-bottom: 24px;">Spin the compost and rummage through the city trash bags to restock your baits!</p>
+        <button class="hud-btn primary-btn" style="width: auto; padding: 12px 36px; border-radius: 30px; margin: 0 auto; font-size: 1.1rem;" onclick="spinTrashCan()">
+          RUMMAGE FOR FOOD!
+        </button>
+      </div>
+    </div>
+
+    <!-- PROFILE MODAL -->
+    <div class="modal-sheet" id="profile-sheet">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🧢</span> SANITATION PROFILE
+        </div>
+        <button class="close-sheet-btn" onclick="closeSheet('profile-sheet')">✕</button>
+      </div>
+      <div style="text-align: center; padding: 20px;">
+        <div style="font-size: 5rem; margin-bottom: 10px;">🦺</div>
+        <h2 style="font-family: 'Bungee'; color: var(--nyc-yellow);" id="profile-title">CHIEF SANITATION INSPECTOR</h2>
+        <p style="color: #aaa; margin-bottom: 20px;">Patrolling all 5 NYC Boroughs</p>
+        
+        <div style="background: rgba(255,255,255,0.05); padding: 18px; border-radius: 16px; margin-bottom: 20px; text-align: left;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span>Total Captured:</span>
+            <strong id="stat-total-caught" style="color: var(--nyc-green);">0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span>Species Discovered:</span>
+            <strong id="stat-species-discovered" style="color: var(--nyc-yellow);">0 / 12</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span>Total Pizza Thrown:</span>
+            <strong id="stat-pizza-thrown" style="color: var(--nyc-orange);">0</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Highest CP Rat:</span>
+            <strong id="stat-highest-cp" style="color: #e91e63;">None</strong>
+          </div>
+        </div>
+
+        <button class="run-away-btn" style="width: 100%; padding: 12px;" onclick="closeSheet('profile-sheet')">CLOSE BADGE</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    /* ==========================================================
+       NYC RATÉMON SPECIES DATABASE
+       ========================================================== */
+    const RAT_SPECIES = [
+      {
+        id: "pizza_rat",
+        name: "Pizza Rat",
+        avatar: "🍕🐀",
+        borough: "Manhattan",
+        rarity: "Common",
+        baseCp: 180,
+        desc: "Famous for dragging entire dollar slices down the L-train staircases."
+      },
+      {
+        id: "sewer_behemoth",
+        name: "Sewer Behemoth",
+        avatar: "🦝🐀",
+        borough: "Bronx",
+        rarity: "Rare",
+        baseCp: 620,
+        desc: "Fed exclusively on deep fryer grease and bodega scraps. Size of a small corgi."
+      },
+      {
+        id: "wall_street_broker",
+        name: "Wall St. Mole-Rat",
+        avatar: "💼🐀",
+        borough: "Financial Dist.",
+        rarity: "Uncommon",
+        baseCp: 340,
+        desc: "Trades stale everything bagels for crypto tips on the charging bull."
+      },
+      {
+        id: "subway_surfer",
+        name: "Third-Rail Surfer",
+        avatar: "⚡🐀",
+        borough: "Queens",
+        rarity: "Rare",
+        baseCp: 540,
+        desc: "Immune to 600V electric rails. Moves with lightning train speed."
+      },
+      {
+        id: "bodega_cat_tamer",
+        name: "Bodega Kingpin",
+        avatar: "👑🐀",
+        borough: "Brooklyn",
+        rarity: "Epic",
+        baseCp: 780,
+        desc: "Stares down bodega guard cats without blinking. Collects lotto tickets."
+      },
+      {
+        id: "halal_cart_lurker",
+        name: "White-Sauce Lurker",
+        avatar: "🥙🐀",
+        borough: "Midtown",
+        rarity: "Common",
+        baseCp: 220,
+        desc: "Lives 4 inches beneath the 53rd & 6th lamb and chicken carts."
+      },
+      {
+        id: "central_park_druid",
+        name: "Central Park Druid",
+        avatar: "🍂🐀",
+        borough: "Central Park",
+        rarity: "Uncommon",
+        baseCp: 390,
+        desc: "Commands armies of Central Park pigeons from inside hollow oak trees."
+      },
+      {
+        id: "timbs_rat",
+        name: "Deadass Timbs Rat",
+        avatar: "🥾🐀",
+        borough: "Staten Island",
+        rarity: "Epic",
+        baseCp: 850,
+        desc: "Wears size 10 Wheat Nubuck boots. Speaks in heavy local slang."
+      },
+      {
+        id: "chopped_cheese_fiend",
+        name: "Chopped Cheese Fiend",
+        avatar: "🍔🐀",
+        borough: "Harlem",
+        rarity: "Rare",
+        baseCp: 670,
+        desc: "Will fight three raccoons simultaneously for a grilled hero roll."
+      },
+      {
+        id: "coned_steamer",
+        name: "ConEd Steam Pipe Ghoul",
+        avatar: "♨️🐀",
+        borough: "Lower East Side",
+        rarity: "Uncommon",
+        baseCp: 410,
+        desc: "Emerges from orange-and-white steam chimneys on freezing winter nights."
+      },
+      {
+        id: "broadway_diva",
+        name: "Broadway Chorus Rat",
+        avatar: "🎭🐀",
+        borough: "Theater District",
+        rarity: "Rare",
+        baseCp: 510,
+        desc: "Knows every tap-dance routine in Chicago. Shrieks in high soprano."
+      },
+      {
+        id: "master_splinter_nyc",
+        name: "Sensei of Canal St",
+        avatar: "🥋🐀",
+        borough: "Chinatown",
+        rarity: "Legendary",
+        baseCp: 1350,
+        desc: "Ancient master of subway ninjutsu. Trains teenage mutant turtles."
+      }
+    ];
+
+    /* NYC LANDMARKS / SPAWN SEEDS */
+    const NYC_HOTSPOTS = [
+      { name: "Times Sq - 42nd St", lat: 40.7580, lng: -73.9855 },
+      { name: "Union Square Park", lat: 40.7359, lng: -73.9911 },
+      { name: "Grand Central Terminal", lat: 40.7527, lng: -73.9772 },
+      { name: "Washington Square Park", lat: 40.7308, lng: -73.9973 },
+      { name: "Herald Square / Macy's", lat: 40.7505, lng: -73.9876 },
+      { name: "Canal St & Broadway", lat: 40.7188, lng: -74.0016 },
+      { name: "Bedford Ave L Stop", lat: 40.7174, lng: -73.9566 },
+      { name: "Astoria Ditmars", lat: 40.7750, lng: -73.9120 }
+    ];
+
+    /* GAME STATE */
+    const state = {
+      playerPos: { lat: 40.7580, lng: -73.9855 }, // Starts in Times Sq
+      pizzaCount: 20,
+      becCount: 3,
+      selectedBait: 'pizza', // 'pizza' or 'bec'
+      trainerLvl: 4,
+      trainerXp: 650,
+      caughtRats: {}, // species_id -> { count, maxCp }
+      activeEncounter: null,
+      stats: {
+        totalCaught: 0,
+        pizzaThrown: 0,
+        highestCp: 0
+      },
+      soundEnabled: true,
+      mapMarkers: {
+        player: null,
+        rats: [],
+        trashStops: []
+      }
+    };
+
+    // Load persisted state if exists
+    try {
+      const saved = localStorage.getItem('ratemon_save_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        Object.assign(state, parsed);
+      }
+    } catch (e) {
+      console.log('Using fresh game state');
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem('ratemon_save_v1', JSON.stringify({
+          pizzaCount: state.pizzaCount,
+          becCount: state.becCount,
+          trainerLvl: state.trainerLvl,
+          trainerXp: state.trainerXp,
+          caughtRats: state.caughtRats,
+          stats: state.stats
+        }));
+      } catch (e) {}
+    }
+
+    /* SYNTHESIZED SOUND FX (Web Audio API - No external mp3 required) */
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+      },
+      playPop() {
+        if (!state.soundEnabled) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.12);
+      },
+      playSqueak() {
+        if (!state.soundEnabled) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(900, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1400, this.ctx.currentTime + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.25);
+      },
+      playFanfare() {
+        if (!state.soundEnabled) return;
+        this.init();
+        const notes = [440, 554.37, 659.25, 880];
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          const start = this.ctx.currentTime + idx * 0.09;
+          gain.gain.setValueAtTime(0.25, start);
+          gain.gain.exponentialRampToValueAtTime(0.01, start + 0.3);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(start);
+          osc.stop(start + 0.32);
+        });
+      }
+    };
+
+    /* ==========================================================
+       MAP & LEAFLET ENGINE
+       ========================================================== */
+    let map;
+
+    function initMap() {
+      // Dark subway-styled tile layer (CartoDB DarkMatter)
+      map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false
+      }).setView([state.playerPos.lat, state.playerPos.lng], 16);
+
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+      }).addTo(map);
+
+      // Add player pin
+      const playerIcon = L.divIcon({
+        className: 'custom-player-pin',
+        html: `<div class="player-marker-wrap">🧢</div>`,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22]
+      });
+      state.mapMarkers.player = L.marker([state.playerPos.lat, state.playerPos.lng], { icon: playerIcon }).addTo(map);
+
+      // Spawn initial surrounding rats and trash stops
+      spawnInitialWorld();
+
+      // Click on map to walk player to that spot (GPS Simulation)
+      map.on('click', (e) => {
+        walkTo(e.latlng.lat, e.latlng.lng);
+      });
+    }
+
+    function walkTo(lat, lng) {
+      state.playerPos = { lat, lng };
+      state.mapMarkers.player.setLatLng([lat, lng]);
+      AudioEngine.playPop();
+
+      // Check proximity to closest neighborhood
+      let closest = NYC_HOTSPOTS[0];
+      let minDis = 999999;
+      NYC_HOTSPOTS.forEach(spot => {
+        const d = Math.hypot(spot.lat - lat, spot.lng - lng);
+        if (d < minDis) {
+          minDis = d;
+          closest = spot;
+        }
+      });
+      document.getElementById('cur-neighborhood').innerText = closest.name;
+
+      // Occasional natural rat ambush on movement
+      if (Math.random() < 0.28) {
+        spawnSingleRatNear(lat, lng);
+      }
+    }
+
+    function spawnInitialWorld() {
+      // Clear old
+      state.mapMarkers.rats.forEach(m => map.removeLayer(m));
+      state.mapMarkers.trashStops.forEach(m => map.removeLayer(m));
+      state.mapMarkers.rats = [];
+      state.mapMarkers.trashStops = [];
+
+      // Spawn 8-12 wild rats around player
+      for (let i = 0; i < 9; i++) {
+        spawnSingleRatNear(state.playerPos.lat, state.playerPos.lng);
+      }
+
+      // Spawn 4 Subway Garbage Stops
+      for (let i = 0; i < 4; i++) {
+        spawnTrashStopNear(state.playerPos.lat, state.playerPos.lng, i);
+      }
+    }
+
+    function spawnSingleRatNear(centerLat, centerLng) {
+      const offsetLat = (Math.random() - 0.5) * 0.007;
+      const offsetLng = (Math.random() - 0.5) * 0.008;
+      const ratLat = centerLat + offsetLat;
+      const ratLng = centerLng + offsetLng;
+
+      // Pick species based on weight
+      const isLegendary = Math.random() < 0.08;
+      let species;
+      if (isLegendary) {
+        species = RAT_SPECIES.find(s => s.rarity === 'Legendary') || RAT_SPECIES[RAT_SPECIES.length - 1];
+      } else {
+        const pool = RAT_SPECIES.filter(s => s.rarity !== 'Legendary');
+        species = pool[Math.floor(Math.random() * pool.length)];
+      }
+
+      const cpVariance = Math.floor((Math.random() - 0.5) * 80);
+      const ratInstance = {
+        instanceId: 'rat_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+        species: species,
+        cp: Math.max(50, species.baseCp + cpVariance + (state.trainerLvl * 25)),
+        lat: ratLat,
+        lng: ratLng
+      };
+
+      const iconClass = species.rarity === 'Legendary' ? 'rat-marker-wrap legendary' : 'rat-marker-wrap';
+      const ratIcon = L.divIcon({
+        className: 'custom-rat-icon',
+        html: `<div class="${iconClass}" title="${species.name} (CP ${ratInstance.cp})">${species.avatar.split('')[0] || '🐀'}</div>`,
+        iconSize: [52, 52],
+        iconAnchor: [26, 26]
+      });
+
+      const marker = L.marker([ratLat, ratLng], { icon: ratIcon }).addTo(map);
+      marker.on('click', () => {
+        startEncounter(ratInstance, marker);
+      });
+
+      state.mapMarkers.rats.push(marker);
+    }
+
+    function spawnTrashStopNear(centerLat, centerLng, index) {
+      const offsetLat = (Math.random() - 0.5) * 0.006;
+      const offsetLng = (Math.random() - 0.5) * 0.007;
+      const stopNames = ["Subway Can #4", "Bodega Dumpster", "Park Wire Basket", "Corner Trash Pile"];
+
+      const binIcon = L.divIcon({
+        className: 'custom-bin-icon',
+        html: `<div class="bin-marker-wrap" title="${stopNames[index % stopNames.length]}">🗑️</div>`,
+        iconSize: [46, 46],
+        iconAnchor: [23, 23]
+      });
+
+      const marker = L.marker([centerLat + offsetLat, centerLng + offsetLng], { icon: binIcon }).addTo(map);
+      marker.on('click', () => {
+        document.getElementById('trash-stop-name').innerText = stopNames[index % stopNames.length];
+        openSheet('stop-sheet');
+      });
+
+      state.mapMarkers.trashStops.push(marker);
+    }
+
+    function triggerRadarScan() {
+      AudioEngine.playPop();
+      showToast("📡 Scanned the subway grid! 3 new rats surfaced!");
+      for (let i = 0; i < 3; i++) {
+        spawnSingleRatNear(state.playerPos.lat, state.playerPos.lng);
+      }
+    }
+
+    /* ==========================================================
+       ENCOUNTER & THROW ENGINE
+       ========================================================== */
+    function startEncounter(ratInstance, markerRef) {
+      state.activeEncounter = {
+        rat: ratInstance,
+        marker: markerRef
+      };
+
+      AudioEngine.playSqueak();
+
+      document.getElementById('encounter-avatar').innerText = ratInstance.species.avatar;
+      document.getElementById('encounter-name').innerText = ratInstance.species.name.toUpperCase();
+      document.getElementById('encounter-stats').innerText = `CP ${ratInstance.cp} • Borough: ${ratInstance.species.borough} (${ratInstance.species.rarity})`;
+      document.getElementById('encounter-pizza-left').innerText = state.pizzaCount;
+
+      document.getElementById('catch-screen').style.display = 'flex';
+    }
+
+    function escapeEncounter() {
+      document.getElementById('catch-screen').style.display = 'none';
+      state.activeEncounter = null;
+    }
+
+    function selectBait(type) {
+      state.selectedBait = type;
+      document.getElementById('ammo-pizza').classList.toggle('active', type === 'pizza');
+      document.getElementById('ammo-bec').classList.toggle('active', type === 'bec');
+      document.getElementById('projectile-icon').innerText = type === 'pizza' ? '🍕' : '🥪';
+    }
+
+    function throwBait() {
+      if (!state.activeEncounter) return;
+
+      const isBec = state.selectedBait === 'bec';
+      if (isBec && state.becCount <= 0) {
+        showToast("Out of Bacon Egg & Cheeses! Using plain pizza instead.");
+        selectBait('pizza');
+        return;
+      }
+      if (!isBec && state.pizzaCount <= 0) {
+        showToast("Out of Pizza slices! Visit a Metro Trash Stop to restock!");
+        return;
+      }
+
+      // Decrement ammo
+      if (isBec) {
+        state.becCount--;
+      } else {
+        state.pizzaCount--;
+      }
+      state.stats.pizzaThrown++;
+      updateHud();
+      document.getElementById('encounter-pizza-left').innerText = state.pizzaCount;
+
+      // Animate throw projectile
+      const projectile = document.getElementById('projectile-icon');
+      const wildBox = document.getElementById('wild-rat-box');
+      AudioEngine.playPop();
+
+      projectile.style.transform = "translateY(-280px) scale(0.65) rotate(360deg)";
+      projectile.style.transition = "transform 0.4s ease-out";
+
+      setTimeout(() => {
+        // Reset projectile position
+        projectile.style.transform = "translateY(0) scale(1) rotate(0deg)";
+        projectile.style.transition = "none";
+
+        // Catch calculation
+        processCatchAttempt(isBec);
+      }, 420);
+    }
+
+    function processCatchAttempt(isBec) {
+      const rat = state.activeEncounter.rat;
+      
+      // Calculate catch chance
+      let catchRate = 0.65;
+      if (rat.species.rarity === 'Uncommon') catchRate = 0.55;
+      if (rat.species.rarity === 'Rare') catchRate = 0.42;
+      if (rat.species.rarity === 'Epic') catchRate = 0.30;
+      if (rat.species.rarity === 'Legendary') catchRate = 0.18;
+
+      if (isBec) catchRate += 0.35; // BEC dramatically buffs catch chance
+
+      const roll = Math.random();
+
+      if (roll <= catchRate) {
+        // SUCCESSFUL CATCH!
+        handleCatchSuccess(rat);
+      } else {
+        // ESCAPED THROW
+        AudioEngine.playSqueak();
+        const ratAvatar = document.getElementById('encounter-avatar');
+        ratAvatar.style.transform = "translateX(25px)";
+        setTimeout(() => ratAvatar.style.transform = "translateX(-25px)", 100);
+        setTimeout(() => ratAvatar.style.transform = "translateX(0)", 200);
+
+        // Does the rat flee the subway?
+        if (Math.random() < 0.22) {
+          showToast(`💨 The ${rat.species.name} scurried into the subway tunnel and escaped!`);
+          map.removeLayer(state.activeEncounter.marker);
+          escapeEncounter();
+        } else {
+          showToast(`The ${rat.species.name} nibbled the food and wants more!`);
+        }
+      }
+    }
+
+    function handleCatchSuccess(rat) {
+      AudioEngine.playFanfare();
+      
+      // Confetti burst
+      if (window.confetti) {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+
+      // Update state
+      const specId = rat.species.id;
+      if (!state.caughtRats[specId]) {
+        state.caughtRats[specId] = { count: 0, maxCp: 0 };
+      }
+      state.caughtRats[specId].count++;
+      if (rat.cp > state.caughtRats[specId].maxCp) {
+        state.caughtRats[specId].maxCp = rat.cp;
+      }
+
+      state.stats.totalCaught++;
+      if (rat.cp > state.stats.highestCp) {
+        state.stats.highestCp = rat.cp;
+      }
+
+      // XP & Level up
+      const xpGained = rat.species.rarity === 'Legendary' ? 400 : 120;
+      state.trainerXp += xpGained;
+      if (state.trainerXp >= state.trainerLvl * 250) {
+        state.trainerLvl++;
+        showToast(`🎉 LEVEL UP! You are now LVL ${state.trainerLvl} Exterminator!`);
+      } else {
+        showToast(`Gotcha! ${rat.species.name} (CP ${rat.cp}) was captured! +${xpGained} XP`);
+      }
+
+      // Remove marker from map
+      if (state.activeEncounter.marker) {
+        map.removeLayer(state.activeEncounter.marker);
+      }
+
+      saveState();
+      updateHud();
+
+      setTimeout(() => {
+        escapeEncounter();
+      }, 900);
+    }
+
+    /* ==========================================================
+       TRASH STOP RUMMAGING
+       ========================================================== */
+    function spinTrashCan() {
+      AudioEngine.playPop();
+      const pizzaFound = Math.floor(Math.random() * 5) + 3;
+      const becFound = Math.random() < 0.35 ? 1 : 0;
+
+      state.pizzaCount += pizzaFound;
+      state.becCount += becFound;
+      saveState();
+      updateHud();
+
+      let rewardText = `🎁 Rummaged trash: +${pizzaFound} 🍕 Slices!`;
+      if (becFound > 0) rewardText += ` & +1 🥪 Bacon Egg & Cheese!`;
+
+      showToast(rewardText);
+      closeSheet('stop-sheet');
+    }
+
+    /* ==========================================================
+       UI & SHEETS (RATDEX, PROFILE, HUD)
+       ========================================================== */
+    function updateHud() {
+      document.getElementById('pizza-count').innerText = state.pizzaCount;
+      document.getElementById('bec-count').innerText = state.becCount;
+      document.getElementById('trainer-level').innerText = `LVL ${state.trainerLvl} • ${state.trainerXp} XP`;
+    }
+
+    function openRatDex() {
+      const container = document.getElementById('ratdex-list');
+      container.innerHTML = '';
+
+      RAT_SPECIES.forEach(spec => {
+        const caughtData = state.caughtRats[spec.id];
+        const isCaught = caughtData && caughtData.count > 0;
+
+        const card = document.createElement('div');
+        card.className = `rat-card ${isCaught ? '' : 'locked'}`;
+        card.innerHTML = `
+          ${isCaught ? `<div class="card-count">x${caughtData.count}</div>` : ''}
+          <div class="card-avatar">${isCaught ? spec.avatar : '❓'}</div>
+          <div class="card-name">${isCaught ? spec.name : 'Unknown Scurrier'}</div>
+          <div class="card-cp">${isCaught ? `Top CP ${caughtData.maxCp}` : '---'}</div>
+          <div class="card-borough">📍 ${spec.borough} (${spec.rarity})</div>
+        `;
+        container.appendChild(card);
+      });
+
+      openSheet('ratdex-sheet');
+    }
+
+    function openProfile() {
+      const uniqueSpecies = Object.keys(state.caughtRats).filter(k => state.caughtRats[k].count > 0).length;
+      document.getElementById('stat-total-caught').innerText = state.stats.totalCaught;
+      document.getElementById('stat-species-discovered').innerText = `${uniqueSpecies} / ${RAT_SPECIES.length}`;
+      document.getElementById('stat-pizza-thrown').innerText = state.stats.pizzaThrown;
+      document.getElementById('stat-highest-cp').innerText = state.stats.highestCp > 0 ? `CP ${state.stats.highestCp}` : 'None';
+      
+      openSheet('profile-sheet');
+    }
+
+    function openTrashStopModal() {
+      openSheet('stop-sheet');
+    }
+
+    function openSheet(id) {
+      document.getElementById(id).style.display = 'flex';
+    }
+
+    function closeSheet(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('action-toast');
+      toast.innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2600);
+    }
+
+    function toggleAudio() {
+      state.soundEnabled = !state.soundEnabled;
+      const btn = document.querySelector('.sound-btn');
+      btn.innerText = state.soundEnabled ? '🔊' : '🔇';
+      showToast(state.soundEnabled ? "Audio FX unmuted" : "Audio FX muted");
+    }
+
+    // Initialize map on document ready
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      updateHud();
+    });
+  </script>
+</body>
+</html>
+
