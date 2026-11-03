@@ -1021,13 +1021,13 @@
     let encounterMap = null;
 
     function initMap() {
-      // Dark subway-styled tile layer (CartoDB DarkMatter)
+      // Free public OpenStreetMap tile layer (No API key needed!)
       map = L.map('map', {
         zoomControl: false,
         attributionControl: false
       }).setView([state.playerPos.lat, state.playerPos.lng], 16);
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19
       }).addTo(map);
 
@@ -1061,7 +1061,7 @@
           boxZoom: false
         }).setView([lat, lng], 18);
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19
         }).addTo(encounterMap);
       } else {
