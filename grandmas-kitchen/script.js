@@ -109,54 +109,85 @@ function speakGrandma(text) {
   // Cancel any previous speech
   synth.cancel();
 
-  // Clean text of emojis or markdown asterisks so speech sounds natural
-  const cleanSpeechText = text
-    .replace(/[*_#~]/g, '')
+  // Clean text of emojis, asterisks, recipe symbols so speech flows lovingly
+  let cleanSpeechText = text
+    .replace(/[*_#~`]/g, '')
     .replace(/[\u{1F600}-\u{1F6FF}]/gu, '')
     .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
+    .replace(/[\u{1F900}-\u{1F9FF}]/gu, '')
+    .replace(/[\u{2600}-\u{26FF}]/gu, '')
+    .replace(/[\u{2700}-\u{27BF}]/gu, '')
     .trim();
 
   if (!cleanSpeechText) return;
 
-  const utterance = new SpeechSynthesisUtterance(cleanSpeechText);
+  // Split into gentle conversational sentences with brief pauses for a loving cadence
+  const sentences = cleanSpeechText.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [cleanSpeechText];
 
-  // Pick the warmest, most natural female voice available on the device
+  // Pick the warmest, most natural human female voice available on the operating system
+  // Prioritize Microsoft Natural Neural voices, Apple Samantha/Karen, Google US English, etc.
   const preferredVoice = availableVoices.find(v => 
     v.lang.startsWith("en") && (
       v.name.includes("Natural") ||
+      v.name.includes("Jenny") ||
+      v.name.includes("Aria") ||
+      v.name.includes("Sonia") ||
       v.name.includes("Samantha") ||
-      v.name.includes("Zira") ||
       v.name.includes("Google US English") ||
       v.name.includes("Victoria") ||
-      v.name.includes("Female")
+      v.name.includes("Zira")
     )
-  ) || availableVoices.find(v => v.lang.startsWith("en")) || null;
+  ) || availableVoices.find(v => v.lang.startsWith("en") && !v.name.includes("David") && !v.name.includes("George")) || null;
 
-  if (preferredVoice) {
-    utterance.voice = preferredVoice;
+  let sentenceIndex = 0;
+
+  function speakNextSentence() {
+    if (sentenceIndex >= sentences.length || !isVoiceEnabled) {
+      characterCard.classList.remove("is-talking");
+      if (voiceToggleBtn) voiceToggleBtn.classList.remove("speaking");
+      return;
+    }
+
+    const currentPart = sentences[sentenceIndex].trim();
+    if (!currentPart) {
+      sentenceIndex++;
+      speakNextSentence();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(currentPart);
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    // Acoustic parameters specifically tuned for a soft, caring, grandmotherly tone:
+    // - pitch: 0.96 (slightly softer, warmer resonance rather than high squeaky robotic pitch)
+    // - rate: 0.86 (relaxed, unhurried, patient storytelling pace)
+    // - volume: 1.0 (clear and comforting)
+    utterance.pitch = 0.96;
+    utterance.rate = 0.86;
+    utterance.volume = 1.0;
+
+    utterance.onstart = () => {
+      characterCard.classList.add("is-talking");
+      if (voiceToggleBtn) voiceToggleBtn.classList.add("speaking");
+    };
+
+    utterance.onend = () => {
+      sentenceIndex++;
+      // Natural 220ms conversational breath between sentences!
+      setTimeout(speakNextSentence, 220);
+    };
+
+    utterance.onerror = () => {
+      sentenceIndex++;
+      speakNextSentence();
+    };
+
+    synth.speak(utterance);
   }
 
-  // Pitch & Rate tuning for a cozy, patient, soothing Grandma cadence
-  utterance.pitch = 1.05; // Gentle, maternal tone
-  utterance.rate = 0.90;  // Relaxed, unhurried grandmother pace
-
-  // Synchronize mouth and head animations with her speaking!
-  utterance.onstart = () => {
-    characterCard.classList.add("is-talking");
-    if (voiceToggleBtn) voiceToggleBtn.classList.add("speaking");
-  };
-
-  utterance.onend = () => {
-    characterCard.classList.remove("is-talking");
-    if (voiceToggleBtn) voiceToggleBtn.classList.remove("speaking");
-  };
-
-  utterance.onerror = () => {
-    characterCard.classList.remove("is-talking");
-    if (voiceToggleBtn) voiceToggleBtn.classList.remove("speaking");
-  };
-
-  synth.speak(utterance);
+  speakNextSentence();
 }
 
 function setupEventListeners() {
