@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grandma's Kitchen - Warm Comfort & Recipes</title>
+  
+  <!-- Google Fonts: Cozy serif + warm cursive/handwriting -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@400;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient Kitchen Background with warm lighting overlay -->
+  <div class="kitchen-scene">
+    <div class="warm-glow"></div>
+    <div class="window-sunlight"></div>
+
+    <!-- Kitchen Scene Top Header -->
+    <header class="kitchen-header">
+      <div class="header-content">
+        <h1>Grandma's Kitchen</h1>
+        <p class="tagline">"Pull up a chair, honey. There's always a warm plate waiting for you."</p>
+      </div>
+      <div class="api-status-pill" id="status-pill" title="Click to check or update API connection">
+        <span class="status-indicator" id="status-dot"></span>
+        <span id="status-text">Connecting to Grandma...</span>
+      </div>
+    </header>
+
+    <!-- Main Experience Area -->
+    <main class="kitchen-main">
+      
+      <!-- LEFT: Grandma in her Kitchen -->
+      <section class="grandma-area">
+        <!-- Cozy kitchen props & background elements -->
+        <div class="kitchen-decor">
+          <div class="cabinet-shelf">
+            <span class="decor-item jar" title="Strawberry Jam">🍓</span>
+            <span class="decor-item tea" title="Herbal Tea">🫖</span>
+            <span class="decor-item plant" title="Kitchen Basil">🪴</span>
+            <span class="decor-item pie" title="Fresh Baked Apple Pie">🥧</span>
+          </div>
+          
+          <div class="stove-area">
+            <div class="steam-pot" title="Soup simmering on the stove">
+              <span class="steam s1">~</span>
+              <span class="steam s2">~</span>
+              <span class="steam s3">~</span>
+              <div class="pot">🍲</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grandma Character Illustration -->
+        <div class="character-card">
+          <!-- Speech thought / feeling bubble above Grandma -->
+          <div class="grandma-speech-bubble" id="speech-bubble">
+            <span id="bubble-text">"Welcome home, sweetheart! Sit down and let's make something good together."</span>
+          </div>
+
+          <div class="grandma-illustration" id="grandma-avatar">
+            <!-- SVG Grandma with animations -->
+            <svg viewBox="0 0 280 340" width="100%" height="100%" class="grandma-svg">
+              <defs>
+                <radialGradient id="hairGrad" cx="50%" cy="40%" r="50%">
+                  <stop offset="0%" stop-color="#f5f5f7"/>
+                  <stop offset="100%" stop-color="#d1d5db"/>
+                </radialGradient>
+                <linearGradient id="skinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#fed7aa"/>
+                  <stop offset="100%" stop-color="#fdba74"/>
+                </linearGradient>
+                <linearGradient id="apronGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#fffbeb"/>
+                  <stop offset="100%" stop-color="#fef3c7"/>
+                </linearGradient>
+                <linearGradient id="dressGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#b45309"/>
+                  <stop offset="100%" stop-color="#78350f"/>
+                </linearGradient>
+              </defs>
+
+              <!-- Body / Dress -->
+              <path d="M 60 260 Q 140 220 220 260 L 240 340 L 40 340 Z" fill="url(#dressGrad)" />
+
+              <!-- Floral / Checked Apron -->
+              <path d="M 95 240 L 185 240 L 205 340 L 75 340 Z" fill="url(#apronGrad)" stroke="#d97706" stroke-width="1.5" />
+              <!-- Apron Straps -->
+              <line x1="105" y1="210" x2="95" y2="240" stroke="#fef3c7" stroke-width="8" stroke-linecap="round"/>
+              <line x1="175" y1="210" x2="185" y2="240" stroke="#fef3c7" stroke-width="8" stroke-linecap="round"/>
+              <!-- Apron Pocket -->
+              <path d="M 115 280 Q 140 285 165 280 L 160 320 Q 140 325 120 320 Z" fill="#fde68a" stroke="#d97706" stroke-width="1" />
+              <!-- Wooden Spoon in Pocket -->
+              <line x1="150" y1="265" x2="160" y2="295" stroke="#92400e" stroke-width="5" stroke-linecap="round"/>
+              <ellipse cx="147" cy="260" rx="7" ry="9" fill="#b45309"/>
+
+              <!-- Neck -->
+              <rect x="125" y="180" width="30" height="35" fill="url(#skinGrad)" rx="6"/>
+
+              <!-- Head Base -->
+              <ellipse cx="140" cy="140" rx="55" ry="60" fill="url(#skinGrad)" />
+
+              <!-- Fluffy Hair Behind & Bun -->
+              <circle cx="140" cy="70" r="28" fill="url(#hairGrad)" />
+              <path d="M 85 130 C 70 85, 210 85, 195 130 C 205 160, 195 180, 185 170 C 185 120, 95 120, 95 170 C 85 180, 75 160, 85 130 Z" fill="url(#hairGrad)" />
+
+              <!-- Rosy Cheeks -->
+              <circle cx="106" cy="155" r="12" fill="#f43f5e" opacity="0.32" />
+              <circle cx="174" cy="155" r="12" fill="#f43f5e" opacity="0.32" />
+
+              <!-- Kind Eyes (with blinking animation) -->
+              <g class="grandma-eyes">
+                <!-- Eyebrows -->
+                <path d="M 100 120 Q 112 114 124 120" stroke="#9ca3af" stroke-width="3" fill="none" stroke-linecap="round"/>
+                <path d="M 156 120 Q 168 114 180 120" stroke="#9ca3af" stroke-width="3" fill="none" stroke-linecap="round"/>
+                
+                <!-- Eye curves / joyful smile lines -->
+                <path d="M 103 135 Q 112 142 121 135" stroke="#451a03" stroke-width="3.5" fill="none" stroke-linecap="round" class="eye-left"/>
+                <path d="M 159 135 Q 168 142 177 135" stroke="#451a03" stroke-width="3.5" fill="none" stroke-linecap="round" class="eye-right"/>
+              </g>
+
+              <!-- Reading Glasses -->
+              <g class="grandma-glasses">
+                <circle cx="112" cy="136" r="17" fill="rgba(255,255,255,0.25)" stroke="#d97706" stroke-width="3"/>
+                <circle cx="168" cy="136" r="17" fill="rgba(255,255,255,0.25)" stroke="#d97706" stroke-width="3"/>
+                <line x1="129" y1="136" x2="151" y2="136" stroke="#d97706" stroke-width="3"/>
+                <!-- Glasses Glint -->
+                <line x1="105" y1="128" x2="112" y2="124" stroke="#ffffff" stroke-width="2" opacity="0.75" stroke-linecap="round"/>
+                <line x1="161" y1="128" x2="168" y2="124" stroke="#ffffff" stroke-width="2" opacity="0.75" stroke-linecap="round"/>
+              </g>
+
+              <!-- Gentle Nose -->
+              <path d="M 137 138 Q 143 150 137 155 Q 140 157 143 154" stroke="#c2410c" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+              <!-- Warm Smile -->
+              <path d="M 125 168 Q 140 182 155 168" stroke="#881337" stroke-width="3.5" fill="none" stroke-linecap="round" id="grandma-mouth"/>
+            </svg>
+          </div>
+
+          <div class="grandma-status">
+            <span class="baking-badge">🥧 Baking fresh cinnamon rolls</span>
+          </div>
+
+          <!-- Quick Suggestion Topic Buttons -->
+          <div class="quick-topics">
+            <button class="topic-btn" data-prompt="Grandma, I'm feeling a little homesick today...">❤️ "I feel homesick..."</button>
+            <button class="topic-btn" data-prompt="Grandma, what can I cook with just eggs, rice, and soy sauce?">🍚 "What can I cook with leftovers?"</button>
+            <button class="topic-btn" data-prompt="Grandma, how do you make the ultimate cozy chicken noodle soup?">🍲 "Tell me your soup recipe"</button>
+            <button class="topic-btn" data-prompt="Grandma, how do you know when chicken is cooked without drying it out?">🍳 "Cooking advice"</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Cozy Recipe Book Chat Interface -->
+      <section class="chat-area">
+        <div class="recipe-book">
+          <div class="book-spine"></div>
+          
+          <div class="book-header">
+            <div class="book-title">
+              <span class="book-icon">📖</span>
+              <div>
+                <h2>Family Recipe & Conversation Journal</h2>
+                <span class="chat-subtitle">Chatting with Grandma across the kitchen table</span>
+              </div>
+            </div>
+            <button class="clear-btn" id="clear-chat-btn" title="Start a fresh chat">New Chat</button>
+          </div>
+
+          <!-- Messages Container -->
+          <div class="chat-messages" id="chat-messages">
+            <!-- Welcome message from Grandma -->
+            <div class="message grandma-msg">
+              <div class="msg-avatar">👵</div>
+              <div class="msg-bubble">
+                <p>Oh honey! Welcome into my kitchen. Come sit down by the warm stove. Have you eaten anything yet today?</p>
+                <p>Tell me what you're craving, or just tell me how your day went. Grandma is always here to listen and help you cook something delicious.</p>
+                <span class="msg-time" id="welcome-time">Just now</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Typing Indicator -->
+          <div class="typing-indicator" id="typing-indicator">
+            <span class="indicator-avatar">👵</span>
+            <div class="dots-bubble">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="indicator-text">Grandma is writing down her advice...</span>
+            </div>
+          </div>
+
+          <!-- Chat Input Bar -->
+          <form class="chat-input-area" id="chat-form">
+            <input 
+              type="text" 
+              id="user-input" 
+              placeholder="Ask Grandma for a recipe, cooking tip, or say hello..." 
+              autocomplete="off"
+              required
+            >
+            <button type="submit" id="send-btn" class="send-button">
+              <span>Send</span>
+              <span class="btn-arrow">➜</span>
+            </button>
+          </form>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Token Configuration Modal (Popup when token is needed) -->
+    <div class="modal-backdrop" id="token-modal">
+      <div class="modal-card">
+        <div class="modal-icon">🔑</div>
+        <h3>Replicate API Token</h3>
+        <p>To connect Grandma to the <strong>Llama 3 8B Instruct</strong> model, enter your Replicate API token below.</p>
+        <p class="privacy-note">🔒 Your token stays safely in your local browser storage and is never uploaded anywhere.</p>
+        
+        <input 
+          type="password" 
+          id="token-input" 
+          placeholder="r8_..." 
+          autocomplete="off"
+        >
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="cancel-token-btn">Cancel</button>
+          <button type="button" class="btn-primary" id="save-token-btn">Connect to Llama 3</button>
+        </div>
+
+        <small class="help-link">
+          Need a token? Get one for free at <a href="https://replicate.com/account/api-tokens" target="_blank" rel="noopener">replicate.com/account/api-tokens</a>
+        </small>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
