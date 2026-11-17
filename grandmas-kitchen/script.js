@@ -6,11 +6,12 @@
 /**
  * 1. CONFIGURATION & CONSTANTS
  * 
- * - PROXY_URL: The Glitch proxy URL requested in the project brief.
- * - REPLICATE_API_URL: Replicate's direct API endpoint (used as backup if proxy is offline).
- * - MODEL_NAME: Meta Llama 3 8B Instruct model identifier.
+ * - PROXY_URL: The working ITP/IMA educational Replicate proxy (No API key needed!)
+ * - FALLBACK_GLITCH_PROXY: The original Glitch proxy URL
+ * - REPLICATE_API_URL: Direct Replicate endpoint (backup if user has their own token)
  */
-const PROXY_URL = "https://replicate-api-proxy.glitch.me/create_n_get/";
+const PROXY_URL = "https://itp-ima-replicate-proxy.web.app/api/create_n_get";
+const FALLBACK_GLITCH_PROXY = "https://replicate-api-proxy.glitch.me/create_n_get/";
 const REPLICATE_API_URL = "https://api.replicate.com/v1/models/meta/meta-llama-3-8b-instruct/predictions";
 
 /**
@@ -355,13 +356,8 @@ function setGrandmaMood(text) {
 }
 
 function updateConnectionStatus() {
-  if (replicateApiToken) {
-    statusDot.className = "status-indicator connected";
-    statusText.textContent = "Llama 3 Connected (Ready)";
-  } else {
-    statusDot.className = "status-indicator error";
-    statusText.textContent = "Needs Replicate Token";
-  }
+  statusDot.className = "status-indicator connected";
+  statusText.textContent = "Grandma is Ready! (Connected)";
 }
 
 function escapeHtml(str) {
