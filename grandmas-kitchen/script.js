@@ -98,18 +98,26 @@ function initVoiceEngine() {
   }
 }
 
+let activeAudioElement = null;
+
 /**
- * Grandma's Spoken Voice Engine
- * Uses warm acoustic tuning (gentle pitch, comforting pace) and selects 
- * a gentle maternal/female voice (Google US English, Samantha, Natural, etc.)
+ * Grandma's True AI Neural Voice Engine
+ * 
+ * Uses realistic neural voice synthesis (Puter AI OpenAI TTS: 'nova'/'shimmer' voice)
+ * with lifelike human breathing, emotional inflections, and zero robotic monotone.
+ * Falls back to tuned browser speech if network audio fails.
  */
-function speakGrandma(text) {
-  if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
+async function speakGrandma(text) {
+  if (!isVoiceEnabled) return;
 
-  // Cancel any previous speech
-  synth.cancel();
+  // Stop any currently playing audio
+  if (activeAudioElement) {
+    activeAudioElement.pause();
+    activeAudioElement = null;
+  }
+  if (synth) synth.cancel();
 
-  // Clean text of emojis, asterisks, recipe symbols so speech flows lovingly
+  // Clean text of emojis, asterisks, recipe symbols so speech flows naturally
   let cleanSpeechText = text
     .replace(/[*_#~`]/g, '')
     .replace(/[\u{1F600}-\u{1F6FF}]/gu, '')
@@ -121,27 +129,78 @@ function speakGrandma(text) {
 
   if (!cleanSpeechText) return;
 
-  // Split into gentle conversational sentences with brief pauses for a loving cadence
+  // Shorten spoken audio to the first 2-3 warm sentences if the response is a long essay,
+  // keeping the conversation conversational and responsive like a real person talking!
+  const sentences = cleanSpeechText.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [cleanSpeechText];
+  const spokenExcerpt = sentences.slice(0, 3).join(" ").trim();
+
+  // --- METHOD 1: High-Fidelity Human AI Voice (OpenAI Neural TTS via Puter) ---
+  if (window.puter && window.puter.ai && window.puter.ai.txt2speech) {
+    try {
+      characterCard.classList.add("is-talking");
+      if (voiceToggleBtn) voiceToggleBtn.classList.add("speaking");
+
+      console.log("Generating realistic AI grandmother voice...");
+      const audio = await puter.ai.txt2speech(spokenExcerpt, {
+        provider: "openai",
+        voice: "shimmer" // Shimmer is a warm, expressive, gentle female human voice
+      });
+
+      if (!isVoiceEnabled) {
+        characterCard.classList.remove("is-talking");
+        if (voiceToggleBtn) voiceToggleBtn.classList.remove("speaking");
+        return;
+      }
+
+      activeAudioElement = audio;
+
+      audio.onplay = () => {
+        characterCard.classList.add("is-talking");
+        if (voiceToggleBtn) voiceToggleBtn.classList.add("speaking");
+      };
+
+      audio.onended = () => {
+        characterCard.classList.remove("is-talking");
+        if (voiceToggleBtn) voiceToggleBtn.classList.remove("speaking");
+        activeAudioElement = null;
+      };
+
+      audio.onerror = (e) => {
+        console.warn("Neural audio error, using browser fallback:", e);
+        speakWithBrowserSpeech(spokenExcerpt);
+      };
+
+      await audio.play();
+      return;
+    } catch (err) {
+      console.warn("Could not generate Puter AI audio, falling back to browser speech:", err);
+    }
+  }
+
+  // --- METHOD 2: Fallback to Browser Speech if Puter is blocked ---
+  speakWithBrowserSpeech(spokenExcerpt);
+}
+
+function speakWithBrowserSpeech(cleanSpeechText) {
+  if (!('speechSynthesis' in window)) return;
+
   const sentences = cleanSpeechText.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [cleanSpeechText];
 
-  // Pick the warmest, most natural human female voice available on the operating system
-  // Prioritize Microsoft Natural Neural voices, Apple Samantha/Karen, Google US English, etc.
   const preferredVoice = availableVoices.find(v => 
     v.lang.startsWith("en") && (
       v.name.includes("Natural") ||
       v.name.includes("Jenny") ||
       v.name.includes("Aria") ||
-      v.name.includes("Sonia") ||
       v.name.includes("Samantha") ||
       v.name.includes("Google US English") ||
       v.name.includes("Victoria") ||
       v.name.includes("Zira")
     )
-  ) || availableVoices.find(v => v.lang.startsWith("en") && !v.name.includes("David") && !v.name.includes("George")) || null;
+  ) || availableVoices.find(v => v.lang.startsWith("en")) || null;
 
   let sentenceIndex = 0;
 
-  function speakNextSentence() {
+  function speakNext() {
     if (sentenceIndex >= sentences.length || !isVoiceEnabled) {
       characterCard.classList.remove("is-talking");
       if (voiceToggleBtn) voiceToggleBtn.classList.remove("speaking");
@@ -151,22 +210,15 @@ function speakGrandma(text) {
     const currentPart = sentences[sentenceIndex].trim();
     if (!currentPart) {
       sentenceIndex++;
-      speakNextSentence();
+      speakNext();
       return;
     }
 
     const utterance = new SpeechSynthesisUtterance(currentPart);
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-    }
+    if (preferredVoice) utterance.voice = preferredVoice;
 
-    // Acoustic parameters specifically tuned for a soft, caring, grandmotherly tone:
-    // - pitch: 0.96 (slightly softer, warmer resonance rather than high squeaky robotic pitch)
-    // - rate: 0.86 (relaxed, unhurried, patient storytelling pace)
-    // - volume: 1.0 (clear and comforting)
-    utterance.pitch = 0.96;
-    utterance.rate = 0.86;
-    utterance.volume = 1.0;
+    utterance.pitch = 0.95;
+    utterance.rate = 0.88;
 
     utterance.onstart = () => {
       characterCard.classList.add("is-talking");
@@ -175,19 +227,18 @@ function speakGrandma(text) {
 
     utterance.onend = () => {
       sentenceIndex++;
-      // Natural 220ms conversational breath between sentences!
-      setTimeout(speakNextSentence, 220);
+      setTimeout(speakNext, 200);
     };
 
     utterance.onerror = () => {
       sentenceIndex++;
-      speakNextSentence();
+      speakNext();
     };
 
     synth.speak(utterance);
   }
 
-  speakNextSentence();
+  speakNext();
 }
 
 function setupEventListeners() {
