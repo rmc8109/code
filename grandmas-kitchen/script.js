@@ -56,6 +56,14 @@ const statusDot = document.getElementById("status-dot");
 const statusText = document.getElementById("status-text");
 const characterCard = document.querySelector(".character-card");
 const clearChatBtn = document.getElementById("clear-chat-btn");
+const voiceToggleBtn = document.getElementById("voice-toggle-btn");
+const voiceIcon = document.getElementById("voice-icon");
+const voiceLabel = document.getElementById("voice-label");
+
+// Voice Synthesis State
+let isVoiceEnabled = true;
+let synth = window.speechSynthesis;
+let availableVoices = [];
 
 // Token Modal Elements
 const tokenModal = document.getElementById("token-modal");
@@ -68,8 +76,88 @@ const cancelTokenBtn = document.getElementById("cancel-token-btn");
  */
 window.addEventListener("DOMContentLoaded", () => {
   updateConnectionStatus();
+  initVoiceEngine();
   setupEventListeners();
 });
+
+function initVoiceEngine() {
+  if (!('speechSynthesis' in window)) {
+    console.warn("Speech synthesis not supported in this browser.");
+    if (voiceToggleBtn) voiceToggleBtn.style.display = "none";
+    return;
+  }
+
+  // Load voices when available
+  function loadVoices() {
+    availableVoices = synth.getVoices();
+  }
+
+  loadVoices();
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+}
+
+/**
+ * Grandma's Spoken Voice Engine
+ * Uses warm acoustic tuning (gentle pitch, comforting pace) and selects 
+ * a gentle maternal/female voice (Google US English, Samantha, Natural, etc.)
+ */
+function speakGrandma(text) {
+  if (!isVoiceEnabled || !('speechSynthesis' in window)) return;
+
+  // Cancel any previous speech
+  synth.cancel();
+
+  // Clean text of emojis or markdown asterisks so speech sounds natural
+  const cleanSpeechText = text
+    .replace(/[*_#~]/g, '')
+    .replace(/[\u{1F600}-\u{1F6FF}]/gu, '')
+    .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
+    .trim();
+
+  if (!cleanSpeechText) return;
+
+  const utterance = new SpeechSynthesisUtterance(cleanSpeechText);
+
+  // Pick the warmest, most natural female voice available on the device
+  const preferredVoice = availableVoices.find(v => 
+    v.lang.startsWith("en") && (
+      v.name.includes("Natural") ||
+      v.name.includes("Samantha") ||
+      v.name.includes("Zira") ||
+      v.name.includes("Google US English") ||
+      v.name.includes("Victoria") ||
+      v.name.includes("Female")
+    )
+  ) || availableVoices.find(v => v.lang.startsWith("en")) || null;
+
+  if (preferredVoice) {
+    utterance.voice = preferredVoice;
+  }
+
+  // Pitch & Rate tuning for a cozy, patient, soothing Grandma cadence
+  utterance.pitch = 1.05; // Gentle, maternal tone
+  utterance.rate = 0.90;  // Relaxed, unhurried grandmother pace
+
+  // Synchronize mouth and head animations with her speaking!
+  utterance.onstart = () => {
+    characterCard.classList.add("is-talking");
+    if (voiceToggleBtn) voiceToggleBtn.classList.add("speaking");
+  };
+
+  utterance.onend = () => {
+    characterCard.classList.remove("is-talking");
+    if (voiceToggleBtn) voiceToggleBtn.classList.remove("speaking");
+  };
+
+  utterance.onerror = () => {
+    characterCard.classList.remove("is-talking");
+    if (voiceToggleBtn) voiceToggleBtn.classList.remove("speaking");
+  };
+
+  synth.speak(utterance);
+}
 
 function setupEventListeners() {
   // Chat submit form
@@ -121,9 +209,24 @@ function setupEventListeners() {
     }
   });
 
-  cancelTokenBtn.addEventListener("click", () => {
-    tokenModal.classList.remove("open");
-  });
+  // Toggle Grandma's Voice on/off
+  if (voiceToggleBtn) {
+    voiceToggleBtn.addEventListener("click", () => {
+      isVoiceEnabled = !isVoiceEnabled;
+      if (isVoiceEnabled) {
+        voiceToggleBtn.classList.add("active");
+        voiceIcon.textContent = "🔊";
+        voiceLabel.textContent = "Grandma's Voice: ON";
+        speakGrandma("I'm right here with you, sweetheart!");
+      } else {
+        voiceToggleBtn.classList.remove("active");
+        voiceIcon.textContent = "🔇";
+        voiceLabel.textContent = "Grandma's Voice: MUTED";
+        if (synth) synth.cancel();
+        characterCard.classList.remove("is-talking");
+      }
+    });
+  }
 }
 
 /**
@@ -157,6 +260,9 @@ async function handleSendMessage(e) {
     // Update speech bubble with a brief warm snippet
     const snippet = responseText.length > 90 ? responseText.slice(0, 90) + "..." : responseText;
     setGrandmaMood(snippet);
+
+    // 6. Speak out loud in Grandma's voice!
+    speakGrandma(responseText);
 
   } catch (error) {
     console.error("Error talking to Grandma:", error);
