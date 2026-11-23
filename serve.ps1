@@ -1,8 +1,8 @@
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://localhost:8000/")
 $listener.Start()
-Write-Host "Server running at http://localhost:8000/ - Serving c:\Users\riona\code"
-Start-Process "http://localhost:8000/"
+Write-Host "Server running at http://localhost:8000/grandmas-kitchen/"
+Start-Process "http://localhost:8000/grandmas-kitchen/"
 
 while ($listener.IsListening) {
     try {
@@ -10,12 +10,12 @@ while ($listener.IsListening) {
         $request = $context.Request
         $response = $context.Response
         
-        $urlPath = $request.Url.LocalPath
-        if ($urlPath -eq "/" -or $urlPath -eq "") {
-            $urlPath = "/index.html"
+        $urlPath = $request.Url.LocalPath.TrimStart("/").Replace("/", "\")
+        if (-not $urlPath -or $urlPath -eq "grandmas-kitchen" -or $urlPath -eq "grandmas-kitchen\") {
+            $urlPath = "grandmas-kitchen\index.html"
         }
         
-        $localFilePath = Join-Path "c:\Users\riona\code" ($urlPath.TrimStart("/").Replace("/", "\"))
+        $localFilePath = Join-Path "c:\Users\riona\code" $urlPath
         
         if (Test-Path $localFilePath -PathType Leaf) {
             $bytes = [System.IO.File]::ReadAllBytes($localFilePath)
@@ -39,7 +39,6 @@ while ($listener.IsListening) {
         }
         $response.Close()
     } catch {
-        # ignore abort/close exceptions on shutdown
+        # ignore abort exceptions on exit
     }
 }
-
